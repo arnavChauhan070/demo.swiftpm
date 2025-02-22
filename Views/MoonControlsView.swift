@@ -19,9 +19,9 @@ struct MoonControlsView: View {
         (2.0, "Mediterranean Sea", "Very small tidal range of about 2m (6.6ft) - height of a door")
     ]
     
-    // Convert model tide height to real-world meters (approximate scaling)
+   
     private var realWorldTideHeight: Double {
-        return tideHeight * 20 // Scale factor to convert model units to meters
+        return tideHeight * 20
     }
     
     private var currentComparison: (height: Double, name: String, description: String)? {
@@ -31,7 +31,7 @@ struct MoonControlsView: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            // Header
+           
             HStack {
                 Text("Tide Experiment Lab")
                     .font(.headline)
@@ -47,7 +47,7 @@ struct MoonControlsView: View {
             Divider()
                 .background(Color.white.opacity(0.3))
             
-            // Current Tide Information
+           
             VStack(alignment: .leading, spacing: 8) {
                 Text("Current Tide Height")
                     .font(.subheadline)
@@ -57,10 +57,10 @@ struct MoonControlsView: View {
                     .font(.title2)
                     .foregroundColor(.white)
                 
-                // Visual comparison
+                
                 if let comparison = currentComparison {
                     HStack(spacing: 12) {
-                        // Visual representation
+                       
                         Rectangle()
                             .fill(Color.cyan.opacity(0.3))
                             .frame(width: 40, height: 100 * (realWorldTideHeight / comparison.height))

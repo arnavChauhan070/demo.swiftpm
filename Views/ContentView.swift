@@ -4,50 +4,41 @@ import SceneKit
 struct ContentView: View {
     // MARK: - State Properties
     @StateObject private var sceneController = SceneController()
+    @StateObject private var storyController = StoryController()
     @State private var showMoonControls = false
     @State private var showTideInfo = false
+    @State private var showWelcome = true
+    @State private var userName = ""
     
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // 1. Background
+        ZStack {
+            if showWelcome {
+                WelcomeView(userName: $userName, showWelcome: $showWelcome)
+                    .onDisappear {
+                        storyController.userName = userName
+                    }
+            } else {
+                // Background
                 Color.black.edgesIgnoringSafeArea(.all)
                 
-                // 2. Main Content
+                // Main 3D Scene
+                SceneView(
+                    scene: sceneController.scene,
+                    options: [.allowsCameraControl]
+                )
+                .edgesIgnoringSafeArea(.all)
+                
                 VStack {
-                    // Title
-                    Text("Earth Tides Visualization")
-                        .font(.largeTitle)
-                        .foregroundColor(.white)
-                        .padding(.top)
+                    Spacer()
                     
-                    // 3. 3D Scene View
-                    ZStack {
-                        SceneView(
-                            scene: sceneController.scene,
-                            options: [.allowsCameraControl]
-                        )
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        
-                        // Stats Overlay
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Tide Height: \(String(format: "%.1f", sceneController.tideHeight * 10)) meters")
-                            Text("Animation: \(sceneController.isAnimating ? "Running" : "Stopped")")
-                            Text("Orbit Position: \(Int(sceneController.moonOrbitAngle))°")
-                            Text("Moon Distance: \(String(format: "%.1f", sceneController.moonDistance))×")
-                        }
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(.cyan)
-                        .padding(8)
-                        .background(Color.black.opacity(0.7))
-                        .cornerRadius(8)
-                        .padding()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    }
+                    // Story View
+                    StoryView(
+                        storyController: storyController,
+                        sceneController: sceneController
+                    )
                     
-                    // 4. Bottom Controls
+                    // Controls at bottom
                     VStack(spacing: 12) {
-                        // Tide Type Selector
                         TideSelector(selectedTide: $sceneController.tideType)
                             .onChange(of: sceneController.tideType) { _ in
                                 withAnimation(.easeInOut(duration: 0.3)) {
@@ -57,9 +48,7 @@ struct ContentView: View {
                             }
                             .padding(.horizontal)
                         
-                        // Control Buttons
                         HStack(spacing: 12) {
-                            // Info Button
                             ControlButton(
                                 icon: "info.circle.fill",
                                 text: showTideInfo ? "Hide Info" : "Show Info"
@@ -69,7 +58,6 @@ struct ContentView: View {
                                 }
                             }
                             
-                            // Experiment Button
                             ControlButton(
                                 icon: "slider.horizontal.3",
                                 text: "Experiment"
@@ -83,7 +71,7 @@ struct ContentView: View {
                     .padding(.bottom)
                 }
                 
-                // 5. Overlays
+                // Modal overlays
                 if showTideInfo {
                     Color.black.opacity(0.5)
                         .edgesIgnoringSafeArea(.all)
@@ -135,7 +123,6 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Helper Views
 struct ControlButton: View {
     let icon: String
     let text: String
@@ -156,7 +143,6 @@ struct ControlButton: View {
     }
 }
 
-// MARK: - Preview
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
