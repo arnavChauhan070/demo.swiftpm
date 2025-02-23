@@ -4,6 +4,8 @@ class StoryController: ObservableObject {
     @Published var currentStoryIndex = 0
     @Published var showStoryDialog = true
     @Published var userName: String = ""
+    @Published var showMoonControls = false
+    @Published var message: String = ""
     
     var storySequence: [StoryScene] {
         [
@@ -78,5 +80,30 @@ enum StoryAction {
     case experimentObserve
     case neapTide
     case conclusion
-    // Add more actions as needed
+    
+    @MainActor
+    func execute(controller: StoryController, sceneController: SceneController) async {
+        switch self {
+        case .experimentStart:
+            controller.showMoonControls = true
+            controller.message = "Use these controls to adjust the Moon's position. Try moving it closer and farther from Earth."
+            
+        case .experimentObserve:
+            controller.showMoonControls = true
+            await Task { @MainActor in
+                sceneController.moonDistance = 3.0
+                sceneController.moonOrbitAngle = 45.0
+                await sceneController.updateMoonPosition()
+            }.value
+            
+            controller.message = "Notice how the tides change as you move the Moon! Try these positions:\n" +
+                               "• 0° for Spring tide (highest)\n" +
+                               "• 90° for Neap tide (lowest)\n" +
+                               "• Different distances to see strength changes"
+            
+        default:
+            // Handle other cases
+            break
+        }
+    }
 } 

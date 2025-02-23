@@ -11,7 +11,7 @@ struct ContentView: View {
     @State private var userName = ""
     
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             if showWelcome {
                 WelcomeView(userName: $userName, showWelcome: $showWelcome)
                     .onDisappear {
@@ -27,6 +27,17 @@ struct ContentView: View {
                     options: [.allowsCameraControl]
                 )
                 .edgesIgnoringSafeArea(.all)
+                
+                // Tide Info Overlay - Moved here to show on main screen
+                TideInfoOverlay(
+                    moonDistance: sceneController.moonDistance,
+                    orbitAngle: sceneController.moonOrbitAngle,
+                    tideHeight: sceneController.tideHeight,
+                    isAnimating: sceneController.isAnimating,
+                    tideType: getTideType(angle: sceneController.moonOrbitAngle)
+                )
+                .padding(.top, 20)
+                .padding(.leading, 20)
                 
                 VStack {
                     Spacer()
@@ -94,6 +105,14 @@ struct ContentView: View {
                 }
                 
                 if showMoonControls {
+                    Color.black.opacity(0.5)
+                        .edgesIgnoringSafeArea(.all)
+                        .onTapGesture {
+                            withAnimation {
+                                showMoonControls = false
+                            }
+                        }
+                    
                     MoonControlsView(
                         isAnimating: $sceneController.isAnimating,
                         moonDistance: $sceneController.moonDistance,
@@ -116,9 +135,22 @@ struct ContentView: View {
                             }
                         }
                     )
-                    .transition(.move(edge: .bottom))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .position(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2)
+                    .transition(.scale.combined(with: .opacity))
                 }
             }
+        }
+    }
+    
+    private func getTideType(angle: Double) -> String {
+        let normalizedAngle = angle.truncatingRemainder(dividingBy: 360)
+        if normalizedAngle.isClose(to: 0) || normalizedAngle.isClose(to: 180) {
+            return "Spring Tide"
+        } else if normalizedAngle.isClose(to: 90) || normalizedAngle.isClose(to: 270) {
+            return "Neap Tide"
+        } else {
+            return "Normal Tide"
         }
     }
 }

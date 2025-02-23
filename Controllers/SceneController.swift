@@ -22,7 +22,13 @@ class SceneController: ObservableObject {
     
     private var animationTimer: Timer?
     @Published var isAnimating = false
-    @Published var moonDistance: Double = 1.5
+    @Published var moonDistance: Double = 3.0 {
+        didSet {
+            Task {
+                await updateMoonPosition()
+            }
+        }
+    }
     @Published var moonOrbitAngle: Double = 0
     
    
@@ -111,7 +117,9 @@ class SceneController: ObservableObject {
         
         moonGeometry.materials = [moonMaterial]
         moonNode.geometry = moonGeometry
-       
+        
+        // Position moon further out initially
+        moonNode.position = SCNVector3(3.0, 0, 0)  // Start at x=3.0 instead of closer
         scene.rootNode.addChildNode(moonNode)
         
         await MainActor.run {
@@ -141,8 +149,8 @@ class SceneController: ObservableObject {
         
         let tiltedAxis = SCNVector3(0, cos(7.25 * .pi / 180), sin(7.25 * .pi / 180))
       
-        let rotationAction = SCNAction.rotate(by: 360 * CGFloat(Double.pi / 180), 
-                                            around: tiltedAxis, 
+        let rotationAction = SCNAction.rotate(by: 360 * CGFloat(Double.pi / 180),
+                                            around: tiltedAxis,
                                             duration: 192)
         sunNode.runAction(SCNAction.repeatForever(rotationAction))
         
@@ -183,24 +191,36 @@ class SceneController: ObservableObject {
     }
     
     func updateTideHeight(for tideType: TideType) async {
-        switch tideType {
-        case .spring:
-            tideHeight = 0.2  // Maximum bulge
-        case .neap:
-            tideHeight = 0.08  // Minimum bulge
-        case .low:
-            tideHeight = 0.05  // Very low bulge
-        case .normal:
-            tideHeight = 0.15  // Standard bulge
+        // Base tide height calculation using inverse cube law
+        let baseDistance = 3.0
+        let baseTideHeight = 0.15
+        
+        // Calculate distance effect (inverse cube law)
+        let distanceEffect = pow(baseDistance/(moonDistance + 1.0), 3)
+        let distanceBasedHeight = baseTideHeight * distanceEffect
+        
+        // Calculate orbital position effect
+        let normalizedAngle = moonOrbitAngle.truncatingRemainder(dividingBy: 360)
+        let angleEffect: Double
+        
+        if normalizedAngle.isClose(to: 0) || normalizedAngle.isClose(to: 180) {
+            angleEffect = 1.5  // Spring tide - 50% stronger
+        } else if normalizedAngle.isClose(to: 90) || normalizedAngle.isClose(to: 270) {
+            angleEffect = 0.5  // Neap tide - 50% weaker
+        } else {
+            angleEffect = 1.0  // Normal tide
         }
+        
+        // Combine both effects
+        tideHeight = distanceBasedHeight * angleEffect
         
         await updateOceanGeometry()
     }
     
     func updateMoonPosition() async {
         let angle = moonOrbitAngle * .pi / 180
-        let x = moonDistance * cos(angle)
-        let z = moonDistance * sin(angle)
+        let x = (moonDistance + 1.0) * cos(angle)
+        let z = (moonDistance + 1.0) * sin(angle)
         
         SCNTransaction.begin()
         SCNTransaction.animationDuration = 0.016
@@ -241,6 +261,7 @@ class SceneController: ObservableObject {
         
         await MainActor.run {
             SCNTransaction.begin()
+            // 0.016 for 60fps
             SCNTransaction.animationDuration = 0.016
             oceanNode.geometry = newGeometry
             SCNTransaction.commit()
@@ -251,7 +272,7 @@ class SceneController: ObservableObject {
         #if targetEnvironment(simulator)
         let segments = 48
         #else
-        let segments = 96  // Increased for smoother shape
+        let segments = 96  // Higher resolution for better bulge shape
         #endif
         
         var vertices: [SCNVector3] = []
@@ -259,8 +280,7 @@ class SceneController: ObservableObject {
         var colors: [CGColor] = []
         var normals: [SCNVector3] = []
         
-        // Increase base bulge amount
-        let maxBulgeAmount = tideHeight * 8.0
+        let maxBulgeAmount = radius * 0.15  // Adjusted bulge intensity
         
         for i in 0...segments {
             let lat = Double(i) * .pi / Double(segments)
@@ -273,18 +293,12 @@ class SceneController: ObservableObject {
                 
                 let point = SCNVector3(x, y, z)
                 let dotProduct = dot(normalize(point), normalize(bulgeDirection))
-                
-                // Calculate angle between point and bulge direction
                 let angle = acos(abs(dotProduct))
+                let latitudeFactor = pow(sin(lat), 2)  // More bulge near the equator
                 
-                // Create figure-8 shape bulge
-                let bulgeAmount = maxBulgeAmount * (1.0 - pow(sin(2 * angle), 2))
+                let bulgeAmount = maxBulgeAmount * pow(cos(angle), 3) * latitudeFactor
+                let bulgeMultiplier = 1.0 + bulgeAmount / radius  // Smooth proportional bulge
                 
-                // Apply bulge with equal strength on both sides
-                let multiplier = dotProduct > 0 ? 1.0 : 1.0  // Same multiplier for both sides
-                let bulgeMultiplier = 1.0 + (bulgeAmount * multiplier)
-                
-                // Apply the bulge
                 x *= bulgeMultiplier
                 y *= bulgeMultiplier
                 z *= bulgeMultiplier
@@ -292,13 +306,12 @@ class SceneController: ObservableObject {
                 vertices.append(SCNVector3(x, y, z))
                 normals.append(normalize(SCNVector3(x, y, z)))
                 
-                // Make the bulge more visible with color
-                let colorIntensity = CGFloat(bulgeMultiplier - 1.0) * 2.0
+                let colorIntensity = CGFloat(bulgeMultiplier - 1.0) * 3.0
                 let tideColor = UIColor(
                     red: 0.0,
-                    green: 0.4 + colorIntensity * 0.6,
+                    green: 0.4 + colorIntensity * 0.5,
                     blue: 1.0,
-                    alpha: 0.8
+                    alpha: 0.9
                 )
                 colors.append(tideColor.cgColor)
             }
@@ -331,8 +344,8 @@ class SceneController: ObservableObject {
                                           dataStride: MemoryLayout<CGColor>.stride)
         
         let element = SCNGeometryElement(indices: indices, primitiveType: .triangles)
-        
         let geometry = SCNGeometry(sources: [vertexSource, normalSource, colorSource], elements: [element])
+        
         let material = SCNMaterial()
         material.diffuse.contents = UIColor(red: 0.0, green: 0.4, blue: 1.0, alpha: 0.8)
         material.specular.contents = UIColor.white
@@ -341,14 +354,12 @@ class SceneController: ObservableObject {
         material.roughness.contents = 0.7
         material.lightingModel = .physicallyBased
         material.transparent.contents = UIColor(white: 1.0, alpha: 0.8)
-        
-        // Add subtle emission for better visibility
         material.emission.contents = UIColor(red: 0.0, green: 0.2, blue: 0.5, alpha: 0.2)
         
         geometry.materials = [material]
         return geometry
     }
-    
+
     private func dot(_ v1: SCNVector3, _ v2: SCNVector3) -> Double {
         return Double(v1.x * v2.x + v1.y * v2.y + v1.z * v2.z)
     }
@@ -365,22 +376,20 @@ class SceneController: ObservableObject {
         switch newTideType {
         case .spring:
             moonOrbitAngle = 0
-            moonDistance = 1.5
+            moonDistance = 3.0  // Adjusted distances
         case .neap:
             moonOrbitAngle = 90
-            moonDistance = 1.5
+            moonDistance = 3.0
         case .low:
             moonOrbitAngle = 45
-            moonDistance = 3.0  // Move moon further away for more dramatic low tide
-            tideHeight = 0.05   // Reduce tide height for low tide
+            moonDistance = 4.0  // Further for low tide
         case .normal:
             moonOrbitAngle = 45
-            moonDistance = 1.5
+            moonDistance = 3.0
         }
         
         Task {
             await updateMoonPosition()
-            await updateTideHeight(for: tideType)
         }
     }
     
@@ -408,6 +417,29 @@ class SceneController: ObservableObject {
         earthMoonLineNode?.geometry?.materials = [moonLineMaterial]
         scene?.rootNode.addChildNode(earthMoonLineNode!)
     }
+    
+    private func calculateBulgeHeight(distance: Double, orbitAngle: Double) -> Double {
+        // Base formula for distance effect
+        let previousDistance = 4.0
+        let previousHeight = tideHeight
+        let distanceEffect = previousHeight * pow(previousDistance/distance, 3)
+        
+        // Adjust based on orbital position
+        let angleEffect: Double
+        let normalizedAngle = orbitAngle.truncatingRemainder(dividingBy: 360)
+        
+        if normalizedAngle.isClose(to: 0) || normalizedAngle.isClose(to: 180) {
+            // Spring tide - Sun and Moon aligned
+            angleEffect = 1.3  // 30% stronger
+        } else if normalizedAngle.isClose(to: 90) || normalizedAngle.isClose(to: 270) {
+            // Neap tide - Moon perpendicular to Sun
+            angleEffect = 0.7  // 30% weaker
+        } else {
+            angleEffect = 1.0  // Normal tide
+        }
+        
+        return distanceEffect * angleEffect
+    }
 }
 
 extension SCNGeometry {
@@ -417,4 +449,10 @@ extension SCNGeometry {
         let element = SCNGeometryElement(indices: [0, 1], primitiveType: .line)
         return SCNGeometry(sources: [source], elements: [element])
     }
-} 
+}
+
+extension Double {
+    func isClose(to value: Double, tolerance: Double = 10) -> Bool {
+        return abs(self - value) < tolerance
+    }
+}

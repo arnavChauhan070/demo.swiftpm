@@ -20,19 +20,7 @@ enum TideType: String, CaseIterable, Identifiable {
             return "Minimal tidal effect when Moon is farthest from Earth"
         }
     }
-    
-    var formula: String {
-        switch self {
-        case .normal:
-            return "F = G * (M * m) / r²"
-        case .spring:
-            return "F = G * ((M + S) * m) / r²"
-        case .neap:
-            return "F = G * (|M - S| * m) / r²"
-        case .low:
-            return "F = G * (M * m) / r³"
-        }
-    }
+
     
     var explanation: String {
         switch self {
@@ -59,4 +47,4 @@ enum TideType: String, CaseIterable, Identifiable {
             return "The Moon's distance from Earth varies by about 50,000 kilometers throughout its orbit!"
         }
     }
-} 
+}

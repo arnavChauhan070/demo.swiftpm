@@ -15,18 +15,24 @@ struct StoryView: View {
                 .animation(.easeInOut, value: storyController.currentStoryIndex)
                 
                 HStack {
-                    Button(action: {
-                        storyController.previousScene()
-                        updateScene()
-                    }) {
-                        Label("Previous", systemImage: "arrow.left")
+                    // Only show Previous button if not at the first story
+                    if storyController.currentStoryIndex > 0 {
+                        Button(action: {
+                            storyController.previousScene()
+                            Task {
+                                await updateScene()
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: "chevron.left")
+                                Text("Previous")
+                            }
                             .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color.blue.opacity(0.6))
+                            .padding()
+                            .background(Color.blue)
                             .cornerRadius(8)
+                        }
                     }
-                    .disabled(storyController.currentStoryIndex == 0)
                     
                     Spacer()
                     
@@ -37,24 +43,36 @@ struct StoryView: View {
                                 storyController.showStoryDialog = false
                             }
                         }) {
-                            Label("Start Exploring", systemImage: "star.fill")
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Color.green.opacity(0.6))
-                                .cornerRadius(8)
+                            
+                            HStack{
+                                Text("Start Exploring")
+                                Image(systemName: "star.fill")
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.green.opacity(0.6))
+                            .cornerRadius(8)
                         }
-                    } else {
+                    }
+//                    } else if (storyController.currentStoryIndex == 0){
+//
+//                    }
+                    else {
                         Button(action: {
                             storyController.nextScene()
-                            updateScene()
+                            Task {
+                                await updateScene()
+                            }
                         }) {
-                            Label("Next", systemImage: "arrow.right")
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Color.blue.opacity(0.6))
-                                .cornerRadius(8)
+                            HStack {
+                                Text("Next")
+                                Image(systemName: "chevron.right")
+                            }
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(8)
                         }
                     }
                 }
@@ -65,32 +83,36 @@ struct StoryView: View {
     }
     
     private func updateScene() {
-        let action = storyController.storySequence[storyController.currentStoryIndex].action
-        
-        switch action {
-        case .introduction:
-            sceneController.positionForTideType(.normal)
-            sceneController.stopAnimation()
-        case .demonstrateBulge:
-            sceneController.startAnimation()
-        case .springTide:
-            sceneController.stopAnimation()
-            sceneController.positionForTideType(.spring)
-        case .lowTide:
-            sceneController.stopAnimation()
-            sceneController.positionForTideType(.low)
-        case .experimentStart:
-            // Keep current position, prompt to open controls
-            break
-        case .experimentObserve:
-            // Let user control the moon position
-            break
-        case .neapTide:
-            sceneController.stopAnimation()
-            sceneController.positionForTideType(.neap)
-        case .conclusion:
-            sceneController.positionForTideType(.normal)
-            sceneController.stopAnimation()
+        Task { @MainActor in
+            let action = storyController.storySequence[storyController.currentStoryIndex].action
+            
+            await action.execute(controller: storyController, sceneController: sceneController)
+            
+            switch action {
+            case .introduction:
+                sceneController.positionForTideType(.normal)
+                sceneController.stopAnimation()
+            case .demonstrateBulge:
+                sceneController.startAnimation()
+            case .springTide:
+                sceneController.stopAnimation()
+                sceneController.positionForTideType(.spring)
+            case .lowTide:
+                sceneController.stopAnimation()
+                sceneController.positionForTideType(.low)
+            case .experimentStart:
+                // Keep current position, prompt to open controls
+                break
+            case .experimentObserve:
+                // Let user control the moon position
+                break
+            case .neapTide:
+                sceneController.stopAnimation()
+                sceneController.positionForTideType(.neap)
+            case .conclusion:
+                sceneController.positionForTideType(.normal)
+                sceneController.stopAnimation()
+            }
         }
     }
 }

@@ -21,35 +21,7 @@ struct TideInfoCard: View {
                 }
             }
             
-            // Formula
-            VStack(spacing: 4) {
-                Text("Formula")
-                    .font(.subheadline)
-                    .foregroundColor(.cyan)
-                Text(tideType.formula)
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundColor(.white)
-                
-                // Formula explanation
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Where:")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    FormulaExplanationRow(symbol: "F", explanation: "Tidal Force")
-                    FormulaExplanationRow(symbol: "G", explanation: "Gravitational Constant")
-                    FormulaExplanationRow(symbol: "M", explanation: "Moon's Mass")
-                    FormulaExplanationRow(symbol: "m", explanation: "Earth's Mass")
-                    FormulaExplanationRow(symbol: "r", explanation: "Distance between bodies")
-                    if tideType == .spring {
-                        FormulaExplanationRow(symbol: "S", explanation: "Sun's Mass")
-                    }
-                }
-                .padding(.vertical, 8)
-            }
-            .padding(.vertical, 4)
-            
+           
             // Explanation
             Text(tideType.explanation)
                 .font(.callout)
