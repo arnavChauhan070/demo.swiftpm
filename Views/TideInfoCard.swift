@@ -7,7 +7,6 @@ struct TideInfoCard: View {
     
     var body: some View {
         VStack(spacing: 12) {
-            // Header
             HStack {
                 Spacer()
                 Text(tideType.rawValue)
@@ -20,16 +19,11 @@ struct TideInfoCard: View {
                         .font(.title3)
                 }
             }
-            
-           
-            // Explanation
             Text(tideType.explanation)
                 .font(.callout)
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .padding(.vertical, 4)
-            
-            // Did You Know
             VStack(spacing: 4) {
                 Text("Did You Know?")
                     .font(.subheadline)
@@ -40,8 +34,6 @@ struct TideInfoCard: View {
                     .multilineTextAlignment(.center)
             }
             .padding(.vertical, 4)
-            
-            // Dismiss Button
             Button(action: onDismiss) {
                 Text("OK")
                     .fontWeight(.medium)

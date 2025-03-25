@@ -6,10 +6,7 @@ struct WelcomeView: View {
     
     var body: some View {
         ZStack {
-            // Star field background
             Color.black.edgesIgnoringSafeArea(.all)
-            
-            // Stars effect
             ForEach(0..<50) { _ in
                 Circle()
                     .fill(Color.white)
@@ -21,14 +18,12 @@ struct WelcomeView: View {
             }
             
             VStack(spacing: 30) {
-                // Vader image with fallback
                 Group {
                     if let _ = UIImage(named: "tide_logo") {
                         Image("tide_logo")
                             .resizable()
                             .scaledToFit()
-                    } else {
-                        // Fallback if image is missing
+                    } else{
                         Image(systemName: "person.fill")
                             .resizable()
                             .scaledToFit()
@@ -42,7 +37,7 @@ struct WelcomeView: View {
                         .stroke(Color.red.opacity(0.3), lineWidth: 2)
                 )
                 
-                Text("Welcome to the Tide Simulator")
+                Text("Welcome to the Tide Explorer")
                     .font(.system(size: 32, weight: .bold))
                     .foregroundColor(.white)
                     .shadow(color: .red.opacity(0.5), radius: 10)
@@ -59,7 +54,7 @@ struct WelcomeView: View {
                             }
                         }
                     }) {
-                        Text("Begin Your Training")
+                        Text("Let's Explore")
                             .font(.headline)
                             .foregroundColor(.white)
                             .padding()
@@ -87,7 +82,11 @@ struct DarkSideTextFieldStyle: TextFieldStyle {
                     .fill(Color.gray.opacity(0.2))
             )
             .foregroundColor(.white)
-            .font(.system(size: 18))
+            .font(.system(size: 18, weight: .medium))
             .autocapitalization(.words)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.cyan.opacity(0.5), lineWidth: 1)
+            )
     }
 } 

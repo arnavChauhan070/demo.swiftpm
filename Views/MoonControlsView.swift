@@ -14,66 +14,74 @@ struct MoonControlsView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            // Header
             HStack {
+                Image(systemName: "moon.stars.fill")
+                    .foregroundColor(.cyan)
                 Text("Moon Control Panel")
                     .font(.title2)
                     .foregroundColor(.white)
+                    .shadow(color: .cyan.opacity(0.5), radius: 5)
                 Spacer()
                 Button(action: onClose) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.white)
+                        .foregroundColor(.cyan)
                         .font(.title2)
                 }
             }
-            
             Divider()
-                .background(Color.white.opacity(0.3))
+                .background(Color.cyan.opacity(0.3))
             
-            // Moon Distance Slider
             VStack(alignment: .leading, spacing: 8) {
                 Text("Moon Distance: \(String(format: "%.1f", moonDistance)) units")
                     .foregroundColor(.cyan)
+                    .shadow(color: .cyan.opacity(0.5), radius: 3)
                 Slider(value: $moonDistance, in: 1...4) { _ in
                     onUpdatePosition()
                 }
+                .tint(.cyan)
             }
             
-            // Orbit Position Slider
             VStack(alignment: .leading, spacing: 8) {
                 Text("Orbit Position: \(String(format: "%.1f°", moonOrbitAngle))")
                     .foregroundColor(.cyan)
+                    .shadow(color: .cyan.opacity(0.5), radius: 3)
                 Slider(value: $moonOrbitAngle, in: 0...360) { _ in
                     onUpdatePosition()
                 }
+                .tint(.cyan)
             }
             
-            // Animation Controls
-            HStack(spacing: 20) {
-                Button(action: {
-                    if !isAnimating {
-                        onStartAnimation()
-                    }
-                }) {
+            HStack {
+                Button(action: onStartAnimation) {
                     Text("Start Rotating")
                         .foregroundColor(.white)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 10)
-                        .background(Color.blue.opacity(0.6))
-                        .cornerRadius(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.blue.opacity(0.6))
+                                .shadow(color: .blue.opacity(0.5), radius: 5)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.cyan.opacity(0.5), lineWidth: 1)
+                        )
                 }
                 
-                Button(action: {
-                    if isAnimating {
-                        onStopAnimation()
-                    }
-                }) {
+                Button(action: onStopAnimation) {
                     Text("Stop")
                         .foregroundColor(.white)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 10)
-                        .background(Color.red.opacity(0.6))
-                        .cornerRadius(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.red.opacity(0.6))
+                                .shadow(color: .red.opacity(0.5), radius: 5)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                        )
                 }
             }
             
@@ -86,9 +94,16 @@ struct MoonControlsView: View {
             }
         }
         .padding()
-        .background(Color.black.opacity(0.95))
-        .cornerRadius(15)
-        .shadow(radius: 10)
+        .background(
+            RoundedRectangle(cornerRadius: 15)
+                .fill(Color.black.opacity(0.95))
+                .shadow(color: .cyan.opacity(0.3), radius: 10)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 15)
+                .stroke(Color.cyan.opacity(0.5), lineWidth: 1)
+                .shadow(color: .cyan.opacity(0.5), radius: 5)
+        )
         .frame(width: 350)
     }
 }
@@ -102,9 +117,17 @@ struct GuidanceBox: View {
                 .font(.callout)
                 .foregroundColor(.cyan)
                 .multilineTextAlignment(.leading)
+                .shadow(color: .cyan.opacity(0.5), radius: 3)
         }
         .padding()
-        .background(Color.black.opacity(0.3))
-        .cornerRadius(8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.black.opacity(0.3))
+                .shadow(color: .cyan.opacity(0.2), radius: 5)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.cyan.opacity(0.3), lineWidth: 1)
+        )
     }
 } 

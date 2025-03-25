@@ -7,53 +7,34 @@ class SceneController: ObservableObject {
     @Published var tideHeight: Double = 0.1
     @Published var tideType: TideType = .normal
     
-    
     private var earthNode = SCNNode()
     private var moonNode = SCNNode()
     private var sunNode = SCNNode()
     private var oceanNode = SCNNode()
-    
     
     private let sunRadius: Double = 4.0
     private let earthRadius: Double = 1.0
     private let moonRadius: Double = 0.27
     private let sunDistance: Double = 12.0
     
-    
-    private var animationTimer: Timer?
     @Published var isAnimating = false
     @Published var moonDistance: Double = 3.0 {
-        didSet {
-            Task {
-                await updateMoonPosition()
-            }
-        }
+        didSet { Task { await updateMoonPosition() } }
     }
     @Published var moonOrbitAngle: Double = 0
     
-   
     private let G: Double = 6.67430e-11
     private let earthMass: Double = 5.972e24
     private let moonMass: Double = 7.34767309e22
     private let sunMass: Double = 1.989e30
     private let realEarthRadius: Double = 6.371e6
-    private let realMoonDistance: Double = 384.4e6
-    private let realSunDistance: Double = 149.6e9
-    
-    
-    private var realWorldTideHeight: Double {
-        
-        return tideHeight * 10
-    }
     
     private var angleLineNode: SCNNode?
     private var earthSunLineNode: SCNNode?
     private var earthMoonLineNode: SCNNode?
     
     init() {
-        Task {
-            await setupScene()
-        }
+        Task { await setupScene() }
     }
     
     private func setupScene() async {
@@ -68,8 +49,7 @@ class SceneController: ObservableObject {
         await setupCamera(in: scene)
         
         self.scene = scene
-        
-        updateAngleLines()
+        await updateAngleLines()
     }
     
     private func setupLighting(in scene: SCNScene) {
@@ -94,7 +74,7 @@ class SceneController: ObservableObject {
         earthNode.geometry = earthGeometry
         scene.rootNode.addChildNode(earthNode)
         
-        // rotate earth
+        
         let action = SCNAction.rotate(by: 360*CGFloat(M_PI/180), around: SCNVector3(0, 1, 0), duration: 8)
         earthNode.runAction(SCNAction.repeatForever(action))
         
@@ -106,26 +86,31 @@ class SceneController: ObservableObject {
     }
     
     private func setupMoon(in scene: SCNScene) async {
-        let moonGeometry = SCNSphere(radius: moonRadius)
-        let moonMaterial = SCNMaterial()
-        
-        if let moonTexture = UIImage(named: "moon_texture") {
-            moonMaterial.diffuse.contents = moonTexture
-        } else {
-            moonMaterial.diffuse.contents = UIColor.gray
-        }
-        
-        moonGeometry.materials = [moonMaterial]
-        moonNode.geometry = moonGeometry
-        
-        // Position moon further out initially
-        moonNode.position = SCNVector3(3.0, 0, 0)  // Start at x=3.0 instead of closer
-        scene.rootNode.addChildNode(moonNode)
-        
         await MainActor.run {
-            let action = SCNAction.rotate(by: 360*CGFloat(M_PI/180), around: SCNVector3(x: 0, y: 1, z: 0), duration: 218)
-            moonNode.runAction(SCNAction.repeatForever(action))
+            let moonGeometry = SCNSphere(radius: moonRadius)
+            let moonMaterial = SCNMaterial()
+            
+            if let moonTexture = UIImage(named: "moon_texture") {
+                moonMaterial.diffuse.contents = moonTexture
+            } else {
+                moonMaterial.diffuse.contents = UIColor.gray
+            }
+            
+            moonGeometry.materials = [moonMaterial]
+            moonNode = SCNNode(geometry: moonGeometry)
+            moonNode.position = SCNVector3(moonDistance, 0, 0)
+            scene.rootNode.addChildNode(moonNode)
+            
+            
+            let rotationAction = SCNAction.rotate(
+                by: 360 * CGFloat(Double.pi / 180),
+                around: SCNVector3(0, 1, 0),
+                duration: 27.3
+            )
+            let repeatAction = SCNAction.repeatForever(rotationAction)
+            moonNode.runAction(repeatAction)
         }
+        
         
         await updateMoonPosition()
     }
@@ -172,15 +157,11 @@ class SceneController: ObservableObject {
     private func setupCamera(in scene: SCNScene) async {
         let cameraNode = SCNNode()
         cameraNode.camera = SCNCamera()
-        
-        // Position camera for a better view of Earth
         cameraNode.position = SCNVector3(0, 3, 10)
         cameraNode.eulerAngles = SCNVector3(x: -0.3, y: 0, z: 0)
-        
-        // Adjust camera properties for better zoom and control
         cameraNode.camera?.zNear = 0.1
         cameraNode.camera?.zFar = 100
-        cameraNode.camera?.fieldOfView = 60  // Adjust field of view for better perspective
+        cameraNode.camera?.fieldOfView = 60
         
         scene.rootNode.addChildNode(cameraNode)
         self.scene = scene
@@ -191,43 +172,41 @@ class SceneController: ObservableObject {
     }
     
     func updateTideHeight(for tideType: TideType) async {
-        // Base tide height calculation using inverse cube law
         let baseDistance = 3.0
         let baseTideHeight = 0.15
-        
-        // Calculate distance effect (inverse cube law)
         let distanceEffect = pow(baseDistance/(moonDistance + 1.0), 3)
         let distanceBasedHeight = baseTideHeight * distanceEffect
-        
-        // Calculate orbital position effect
         let normalizedAngle = moonOrbitAngle.truncatingRemainder(dividingBy: 360)
         let angleEffect: Double
         
         if normalizedAngle.isClose(to: 0) || normalizedAngle.isClose(to: 180) {
-            angleEffect = 1.5  // Spring tide - 50% stronger
+            angleEffect = 1.5
         } else if normalizedAngle.isClose(to: 90) || normalizedAngle.isClose(to: 270) {
-            angleEffect = 0.5  // Neap tide - 50% weaker
+            angleEffect = 0.5
         } else {
-            angleEffect = 1.0  // Normal tide
+            angleEffect = 1.0
         }
         
-        // Combine both effects
         tideHeight = distanceBasedHeight * angleEffect
-        
         await updateOceanGeometry()
     }
     
     func updateMoonPosition() async {
         let angle = moonOrbitAngle * .pi / 180
-        let x = (moonDistance + 1.0) * cos(angle)
-        let z = (moonDistance + 1.0) * sin(angle)
+        let safeDistance = max(moonDistance, 2.0)
         
-        SCNTransaction.begin()
-        SCNTransaction.animationDuration = 0.016
-        moonNode.position = SCNVector3(x, 0, z)
-        updateAngleLines()
-        SCNTransaction.commit()
+        let x = safeDistance * cos(angle)
+        let z = safeDistance * sin(angle)
+        let newPosition = SCNVector3(x, 0, z)
         
+        await MainActor.run {
+            SCNTransaction.begin()
+            SCNTransaction.animationDuration = 0.016
+            moonNode.position = newPosition
+            SCNTransaction.commit()
+        }
+        
+        await updateAngleLines()
         await updateTideHeight(for: tideType)
     }
     
@@ -236,12 +215,10 @@ class SceneController: ObservableObject {
         
         Task { @MainActor in
             isAnimating = true
-            
-           
             while isAnimating {
                 moonOrbitAngle = (moonOrbitAngle + 0.2).truncatingRemainder(dividingBy: 360)
                 await updateMoonPosition()
-                try? await Task.sleep(nanoseconds: 16_666_667) //
+                try? await Task.sleep(nanoseconds: 16_666_667)
             }
         }
     }
@@ -261,7 +238,6 @@ class SceneController: ObservableObject {
         
         await MainActor.run {
             SCNTransaction.begin()
-            // 0.016 for 60fps
             SCNTransaction.animationDuration = 0.016
             oceanNode.geometry = newGeometry
             SCNTransaction.commit()
@@ -272,7 +248,7 @@ class SceneController: ObservableObject {
         #if targetEnvironment(simulator)
         let segments = 48
         #else
-        let segments = 96  // Higher resolution for better bulge shape
+        let segments = 96
         #endif
         
         var vertices: [SCNVector3] = []
@@ -280,7 +256,7 @@ class SceneController: ObservableObject {
         var colors: [CGColor] = []
         var normals: [SCNVector3] = []
         
-        let maxBulgeAmount = radius * 0.15  // Adjusted bulge intensity
+        let maxBulgeAmount = radius * 0.15
         
         for i in 0...segments {
             let lat = Double(i) * .pi / Double(segments)
@@ -294,10 +270,10 @@ class SceneController: ObservableObject {
                 let point = SCNVector3(x, y, z)
                 let dotProduct = dot(normalize(point), normalize(bulgeDirection))
                 let angle = acos(abs(dotProduct))
-                let latitudeFactor = pow(sin(lat), 2)  // More bulge near the equator
+                let latitudeFactor = pow(sin(lat), 2)
                 
                 let bulgeAmount = maxBulgeAmount * pow(cos(angle), 3) * latitudeFactor
-                let bulgeMultiplier = 1.0 + bulgeAmount / radius  // Smooth proportional bulge
+                let bulgeMultiplier = 1.0 + bulgeAmount / radius
                 
                 x *= bulgeMultiplier
                 y *= bulgeMultiplier
@@ -376,13 +352,13 @@ class SceneController: ObservableObject {
         switch newTideType {
         case .spring:
             moonOrbitAngle = 0
-            moonDistance = 3.0  // Adjusted distances
+            moonDistance = 3.0
         case .neap:
             moonOrbitAngle = 90
             moonDistance = 3.0
         case .low:
             moonOrbitAngle = 45
-            moonDistance = 4.0  // Further for low tide
+            moonDistance = 4.0
         case .normal:
             moonOrbitAngle = 45
             moonDistance = 3.0
@@ -393,49 +369,55 @@ class SceneController: ObservableObject {
         }
     }
     
-    private func updateAngleLines() {
-        // Remove existing lines
-        angleLineNode?.removeFromParentNode()
-        earthSunLineNode?.removeFromParentNode()
-        earthMoonLineNode?.removeFromParentNode()
-        
-        // Create Earth-Sun line with better visibility
-        let earthSunLine = SCNGeometry.line(from: earthNode.position, to: sunNode.position)
-        earthSunLineNode = SCNNode(geometry: earthSunLine)
-        let sunLineMaterial = SCNMaterial()
-        sunLineMaterial.diffuse.contents = UIColor.yellow
-        sunLineMaterial.emission.contents = UIColor.yellow.withAlphaComponent(0.6)
-        earthSunLineNode?.geometry?.materials = [sunLineMaterial]
-        scene?.rootNode.addChildNode(earthSunLineNode!)
-        
-        // Create Earth-Moon line with better visibility
-        let earthMoonLine = SCNGeometry.line(from: earthNode.position, to: moonNode.position)
-        earthMoonLineNode = SCNNode(geometry: earthMoonLine)
-        let moonLineMaterial = SCNMaterial()
-        moonLineMaterial.diffuse.contents = UIColor.white
-        moonLineMaterial.emission.contents = UIColor.white.withAlphaComponent(0.6)
-        earthMoonLineNode?.geometry?.materials = [moonLineMaterial]
-        scene?.rootNode.addChildNode(earthMoonLineNode!)
+    private func updateAngleLines() async {
+        await MainActor.run {
+            angleLineNode?.removeFromParentNode()
+            earthSunLineNode?.removeFromParentNode()
+            earthMoonLineNode?.removeFromParentNode()
+            let moonPosition = moonNode.position
+            let earthPosition = earthNode.position
+            let sunPosition = sunNode.position
+            let earthSunLine = SCNGeometry.line(from: earthPosition, to: sunPosition)
+            earthSunLineNode = SCNNode(geometry: earthSunLine)
+            let sunLineMaterial = SCNMaterial()
+            sunLineMaterial.diffuse.contents = UIColor.yellow
+            sunLineMaterial.emission.contents = UIColor.yellow
+            sunLineMaterial.transparency = 0.8
+            earthSunLineNode?.geometry?.materials = [sunLineMaterial]
+            earthSunLineNode?.renderingOrder = 100
+            scene?.rootNode.addChildNode(earthSunLineNode!)
+            
+           
+            let earthMoonLine = SCNGeometry.line(from: earthPosition, to: moonPosition)
+            earthMoonLineNode = SCNNode(geometry: earthMoonLine)
+            let moonLineMaterial = SCNMaterial()
+            moonLineMaterial.diffuse.contents = UIColor.white
+            moonLineMaterial.emission.contents = UIColor.white
+            moonLineMaterial.transparency = 0.8
+            earthMoonLineNode?.geometry?.materials = [moonLineMaterial]
+            earthMoonLineNode?.renderingOrder = 100
+            scene?.rootNode.addChildNode(earthMoonLineNode!)
+        }
     }
     
     private func calculateBulgeHeight(distance: Double, orbitAngle: Double) -> Double {
-        // Base formula for distance effect
+      
         let previousDistance = 4.0
         let previousHeight = tideHeight
         let distanceEffect = previousHeight * pow(previousDistance/distance, 3)
         
-        // Adjust based on orbital position
+        
         let angleEffect: Double
         let normalizedAngle = orbitAngle.truncatingRemainder(dividingBy: 360)
         
         if normalizedAngle.isClose(to: 0) || normalizedAngle.isClose(to: 180) {
-            // Spring tide - Sun and Moon aligned
-            angleEffect = 1.3  // 30% stronger
+           
+            angleEffect = 1.3
         } else if normalizedAngle.isClose(to: 90) || normalizedAngle.isClose(to: 270) {
-            // Neap tide - Moon perpendicular to Sun
-            angleEffect = 0.7  // 30% weaker
+           
+            angleEffect = 0.7
         } else {
-            angleEffect = 1.0  // Normal tide
+            angleEffect = 1.0
         }
         
         return distanceEffect * angleEffect

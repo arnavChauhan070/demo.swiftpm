@@ -8,15 +8,15 @@ import PackageDescription
 import AppleProductTypes
 
 let package = Package(
-    name: "demo",
+    name: "Tide Explorer",
     platforms: [
         .iOS("16.0")
     ],
     products: [
         .iOSApplication(
-            name: "demo",
+            name: "Tide Explorer",
             targets: ["AppModule"],
-            bundleIdentifier: "example.demo",
+            bundleIdentifier: "example.TideExplorer",
             teamIdentifier: "SP2CKJ4AU4",
             displayVersion: "1.0",
             bundleVersion: "1",

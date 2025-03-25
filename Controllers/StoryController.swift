@@ -46,7 +46,7 @@ class StoryController: ObservableObject {
             ),
             StoryScene(
                 title: "The Knowledge is Yours 🎓",
-                content: "You have learned well, \(userName). You now understand that: \n\n• Spring tides occur when forces align\n• Low tides show the ocean floor\n• Neap tides demonstrate balance\n\nThe Force will be with you, always...",
+                content: "You have learned well, \(userName). You now understand that: \n\n• Spring tides occur when forces align\n• Distance affects tide strength\n• The Moon's position shapes our oceans\n\nThe Force will be with you, always...",
                 action: .conclusion
             )
         ]
@@ -102,7 +102,6 @@ enum StoryAction {
                                "• Different distances to see strength changes"
             
         default:
-            // Handle other cases
             break
         }
     }

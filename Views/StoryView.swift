@@ -15,7 +15,6 @@ struct StoryView: View {
                 .animation(.easeInOut, value: storyController.currentStoryIndex)
                 
                 HStack {
-                    // Only show Previous button if not at the first story
                     if storyController.currentStoryIndex > 0 {
                         Button(action: {
                             storyController.previousScene()
@@ -35,8 +34,6 @@ struct StoryView: View {
                     }
                     
                     Spacer()
-                    
-                    // Show different button at the end
                     if storyController.currentStoryIndex == storyController.storySequence.count - 1 {
                         Button(action: {
                             withAnimation {
@@ -55,9 +52,6 @@ struct StoryView: View {
                             .cornerRadius(8)
                         }
                     }
-//                    } else if (storyController.currentStoryIndex == 0){
-//
-//                    }
                     else {
                         Button(action: {
                             storyController.nextScene()
@@ -101,16 +95,14 @@ struct StoryView: View {
                 sceneController.stopAnimation()
                 sceneController.positionForTideType(.low)
             case .experimentStart:
-                // Keep current position, prompt to open controls
                 break
             case .experimentObserve:
-                // Let user control the moon position
                 break
             case .neapTide:
                 sceneController.stopAnimation()
                 sceneController.positionForTideType(.neap)
             case .conclusion:
-                sceneController.positionForTideType(.normal)
+                //sceneController.positionForTideType(.normal)
                 sceneController.stopAnimation()
             }
         }
@@ -124,7 +116,6 @@ struct DialogBox: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                // Small Vader image next to the title
                 Image("darth_vader")
                     .resizable()
                     .scaledToFit()
@@ -137,7 +128,7 @@ struct DialogBox: View {
                     .shadow(color: .red.opacity(0.5), radius: 5)
                 
                 Text(title)
-                    .font(.title2)
+                    .font(.title)
                     .bold()
                     .foregroundColor(.white)
             }

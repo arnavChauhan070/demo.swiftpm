@@ -18,17 +18,12 @@ struct ContentView: View {
                         storyController.userName = userName
                     }
             } else {
-                // Background
                 Color.black.edgesIgnoringSafeArea(.all)
-                
-                // Main 3D Scene
                 SceneView(
                     scene: sceneController.scene,
                     options: [.allowsCameraControl]
                 )
                 .edgesIgnoringSafeArea(.all)
-                
-                // Tide Info Overlay - Moved here to show on main screen
                 TideInfoOverlay(
                     moonDistance: sceneController.moonDistance,
                     orbitAngle: sceneController.moonOrbitAngle,
@@ -41,14 +36,10 @@ struct ContentView: View {
                 
                 VStack {
                     Spacer()
-                    
-                    // Story View
                     StoryView(
                         storyController: storyController,
                         sceneController: sceneController
                     )
-                    
-                    // Controls at bottom
                     VStack(spacing: 12) {
                         TideSelector(selectedTide: $sceneController.tideType)
                             .onChange(of: sceneController.tideType) { _ in
@@ -81,8 +72,6 @@ struct ContentView: View {
                     }
                     .padding(.bottom)
                 }
-                
-                // Modal overlays
                 if showTideInfo {
                     Color.black.opacity(0.5)
                         .edgesIgnoringSafeArea(.all)

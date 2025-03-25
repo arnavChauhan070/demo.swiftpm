@@ -9,10 +9,16 @@ struct TideInfoOverlay: View {
     
     var body: some View {
         VStack(alignment: .center, spacing: 12) {
-            Text("Tide Information")
-                .font(.title2)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity, alignment: .center)
+            HStack {
+                Image(systemName: "wave.3.right")
+                    .foregroundColor(.cyan)
+                Text("Tide Information")
+                    .font(.title2)
+                    .foregroundColor(.white)
+                Image(systemName: "wave.3.left")
+                    .foregroundColor(.cyan)
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
             
             InfoRow(
                 label: "Moon Position:",
@@ -36,8 +42,16 @@ struct TideInfoOverlay: View {
         }
         .font(.system(.body, design: .monospaced))
         .padding()
-        .background(Color.black.opacity(0.7))
-        .cornerRadius(10)
+        .background(
+            RoundedRectangle(cornerRadius: 15)
+                .fill(Color.black.opacity(0.8))
+                .shadow(color: .cyan.opacity(0.3), radius: 10)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 15)
+                .stroke(Color.cyan.opacity(0.5), lineWidth: 1)
+                .shadow(color: .cyan.opacity(0.5), radius: 5)
+        )
         .frame(maxWidth: 300)
     }
 }
@@ -50,9 +64,11 @@ struct InfoRow: View {
         HStack {
             Text(label)
                 .foregroundColor(.cyan)
+                .shadow(color: .cyan.opacity(0.5), radius: 3)
             Spacer()
             Text(value)
                 .foregroundColor(.white)
+                .shadow(color: .white.opacity(0.5), radius: 2)
         }
         .font(.system(.body, design: .monospaced))
     }
